@@ -18,13 +18,24 @@ def retrieve_artists():
 
 def begin_search(beginning_artist, ending_artist):
     sp = spotipy.Spotify()
-    found_artists = {}
+    found_artists = {beginning_artist: set([])}
+    tree_depth = 3
 
-    results = sp.search(q=beginning_artist, limit=50)
+    results = sp.search(q=beginning_artist, limit=20)
     for index, track in enumerate(results['tracks']['items']):
-        print('Track: ', track['name'])
         for artist in track['artists']:
-            print(' Artist: ', artist['name'])
+            featured_artist = artist['name']
+
+            if featured_artist in found_artists.keys():
+                continue
+
+            if featured_artist == ending_artist:
+                print("found end")
+
+            if featured_artist not in found_artists[beginning_artist]:
+                found_artists[beginning_artist].add(featured_artist)
+
+    print(found_artists)
 
 
 main()
