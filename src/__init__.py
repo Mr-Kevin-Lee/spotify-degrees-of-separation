@@ -1,12 +1,43 @@
 import spotipy
 
+sp = spotipy.Spotify()
+
+
+def breadth_first_search(artist_graph, starting_artist, ending_artist):
+
+    queue = [(starting_artist, [starting_artist])]
+    # iterate through queue and pick up the first elements
+    while queue:
+        (vertex, path) = queue.pop(0)
+        # find next unique artist in associated artists graph
+        not_yet_visited = artist_graph[vertex] - set(path)
+        for next_artist in not_yet_visited:
+
+            artists = artist_graph.get(next_artist, set([]))
+
+            results = sp.search(q=next_artist, limit=50)
+            for track in results['tracks']['items']:
+                if len(track['artists']) > 1:
+                    for artist in track['artists']:
+                        featured_artist = artist['name'].lower()
+                        print(featured_artist)
+
+                        if featured_artist == ending_artist:
+                            return path + [next_artist, featured_artist]
+
+                        if featured_artist not in artists:
+                            artists.add(featured_artist)
+
+            artist_graph[next_artist] = artists
+
+            if next_artist == ending_artist:
+                return path + [next_artist]
+            else:
+                queue.append((next_artist, path + [next_artist]))
+
 
 def main():
-    # sp = spotipy.Spotify()
-    # results = sp.search(q='Kendrick Lamar', limit=20)
-    # for i, t in enumerate(results['tracks']['items']):
-    #     print(' ', i, t['name'])
-    beginning_artist, ending_artist = retrieve_artists()
+    beginning_artist, ending_artist = "chance the rapper", "the weeknd"  #retrieve_artists()
     begin_search(beginning_artist, ending_artist)
 
 
@@ -17,25 +48,21 @@ def retrieve_artists():
 
 
 def begin_search(beginning_artist, ending_artist):
-    sp = spotipy.Spotify()
-    found_artists = {beginning_artist: set([])}
-    tree_depth = 3
+    featured_artists = {beginning_artist: set([])}
 
-    results = sp.search(q=beginning_artist, limit=20)
-    for index, track in enumerate(results['tracks']['items']):
+    results = sp.search(q=beginning_artist, limit=50)
+    for track in results['tracks']['items']:
         for artist in track['artists']:
-            featured_artist = artist['name']
-
-            if featured_artist in found_artists.keys():
-                continue
+            featured_artist = artist['name'].lower()
+            # print(featured_artist)
 
             if featured_artist == ending_artist:
-                print("found end")
+                print(track['name'])
+                return
 
-            if featured_artist not in found_artists[beginning_artist]:
-                found_artists[beginning_artist].add(featured_artist)
+            if featured_artist not in featured_artists:
+                featured_artists[beginning_artist].add(featured_artist)
 
-    print(found_artists)
-
+    print(list(breadth_first_search(featured_artists, beginning_artist, ending_artist)))
 
 main()
