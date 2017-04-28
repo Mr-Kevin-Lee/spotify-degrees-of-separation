@@ -2,7 +2,8 @@
 
 This is a project based on [Six Degrees of Separation] (https://en.wikipedia.org/wiki/Six_degrees_of_separation) written
 in Python and using the Spotipy library. Works well with your favorite rappers!
-http://media2.giphy.com/media/6nGE3BmUlhs3e/giphy.gif
+
+![](https://media.giphy.com/media/7prA745iHHzgY/giphy.gif)
 
 ## TODO
 - Optimize BFS
