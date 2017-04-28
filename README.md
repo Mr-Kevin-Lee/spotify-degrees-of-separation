@@ -1,6 +1,6 @@
 # Degrees of Separation of Music Artists
 
-This is a project based on [Six Degrees of Separation] (https://en.wikipedia.org/wiki/Six_degrees_of_separation) written
+This is a project based on the idea, ![Six Degrees of Separation](https://en.wikipedia.org/wiki/Six_degrees_of_separation), written
 in Python and using the Spotipy library. Works well with your favorite rappers!
 
 ![](https://media.giphy.com/media/7prA745iHHzgY/giphy.gif)
