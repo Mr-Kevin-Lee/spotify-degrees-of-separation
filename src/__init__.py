@@ -55,6 +55,9 @@ class DegreesOfSeparation:
         track_artists = artist_graph.get(initial_artist, set([]))
 
         results = self.__sp.search(q=initial_artist, limit=50)
+
+        sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
+
         for track in results['tracks']['items']:
             if len(track['artists']) > 1:
                 for artist in track['artists']:
