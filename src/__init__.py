@@ -1,4 +1,5 @@
 import spotipy
+from src.TrackInfo import TrackInfo
 
 
 class DegreesOfSeparation:
@@ -8,7 +9,7 @@ class DegreesOfSeparation:
 
     def main(self):
         beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
-        result = self.perform_artist_search(beginning_artist, ending_artist)
+        result = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
         print(result)
 
     def retrieve_artists(self):
@@ -18,17 +19,20 @@ class DegreesOfSeparation:
 
     def perform_artist_search(self, beginning_artist, ending_artist):
         featured_artists = {beginning_artist: set([])}
+        temp_featured_artists = []
 
         results = self.__sp.search(q=beginning_artist, limit=50)
         for track in results['tracks']['items']:
             for artist in track['artists']:
-                featured_artist = artist['name']
+                featured_artist = str(artist['name']).upper()
 
                 if featured_artist == ending_artist:
                     return [beginning_artist, ending_artist]
 
-                if featured_artist not in featured_artists:
-                    featured_artists[beginning_artist].add(featured_artist)
+                if self.can_add_artist_to_graph(featured_artist, featured_artists, temp_featured_artists, beginning_artist):
+                    related_track = TrackInfo(track['name'], beginning_artist, featured_artist)
+                    temp_featured_artists.append(featured_artist)
+                    featured_artists[beginning_artist].add(related_track)
 
         return self.artist_subsearch(featured_artists, beginning_artist, ending_artist)
 
@@ -55,7 +59,6 @@ class DegreesOfSeparation:
         track_artists = artist_graph.get(initial_artist, set([]))
 
         results = self.__sp.search(q=initial_artist, limit=50)
-
         sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
 
         for track in results['tracks']['items']:
@@ -68,6 +71,9 @@ class DegreesOfSeparation:
 
                     if featured_artist not in track_artists:
                         track_artists.add(featured_artist)
+
+    def can_add_artist_to_graph(self, featured_artist, featured_artists, temp_featured_artists, beginning_artist):
+        return featured_artist not in featured_artists and featured_artist not in temp_featured_artists and featured_artist != beginning_artist
 
 
 degrees_of_separation = DegreesOfSeparation()
