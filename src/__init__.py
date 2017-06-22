@@ -1,6 +1,7 @@
 import spotipy
 import yaml
-import urllib.request
+import requests
+from spotipy.oauth2 import SpotifyClientCredentials
 
 from src.TrackInfo import TrackInfo
 
@@ -8,19 +9,32 @@ from src.TrackInfo import TrackInfo
 class DegreesOfSeparation:
 
     def __init__(self):
-        self.__sp = spotipy.Spotify()
+        self.__sp = None
         self._config = {}
+        self._access_token = ""
 
     def main(self):
+        try:
+            self.load_config()
+            self.initialize_spotipy()
+        except Exception as error:
+            print(error)
+
+        beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
+        result = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
+        print(result)
+
+    def initialize_spotipy(self):
+        client_credentials_manager = SpotifyClientCredentials(self._config.get("client_id"),
+                                                              self._config.get("client_secret"))
+        self.__sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
+    def load_config(self):
         with open("config/config.yaml", 'r') as stream:
             try:
                 self._config = yaml.load(stream)
             except yaml.YAMLError as exc:
                 print(exc)
-
-        beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
-        result = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
-        print(result)
 
     def retrieve_artists(self):
         beginning_artist = input("Name of artist to begin search: ").lower()
@@ -54,16 +68,16 @@ class DegreesOfSeparation:
             # find next unique artist in associated artists graph
             not_yet_visited = artist_graph[vertex] - set(path)
 
-            for current_artist in not_yet_visited:
-                featured_artists = self.search_for_featured_artists(artist_graph, current_artist, ending_artist, path)
-                artist_graph[current_artist] = featured_artists
+            for current_track in not_yet_visited:
+                featured_artists = self.search_for_featured_artists(artist_graph, current_track, ending_artist, path)
+                artist_graph[current_track] = featured_artists
 
                 if featured_artists is not None and ending_artist in featured_artists:
                     return featured_artists
-                elif current_artist == ending_artist:
-                    return path + [current_artist]
+                elif current_track == ending_artist:
+                    return path + [current_track]
                 else:
-                    queue.append((current_artist, path + [current_artist]))
+                    queue.append((current_track, path + [current_track]))
 
     def search_for_featured_artists(self, artist_graph, initial_artist, ending_artist, path):
         track_artists = artist_graph.get(initial_artist, set([]))
