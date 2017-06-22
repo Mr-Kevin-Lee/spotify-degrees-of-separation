@@ -1,4 +1,7 @@
 import spotipy
+import yaml
+import urllib.request
+
 from src.TrackInfo import TrackInfo
 
 
@@ -6,8 +9,15 @@ class DegreesOfSeparation:
 
     def __init__(self):
         self.__sp = spotipy.Spotify()
+        self._config = {}
 
     def main(self):
+        with open("config/config.yaml", 'r') as stream:
+            try:
+                self._config = yaml.load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+
         beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
         result = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
         print(result)
