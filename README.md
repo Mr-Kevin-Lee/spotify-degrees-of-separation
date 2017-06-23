@@ -18,3 +18,7 @@ in Python and using the Spotipy library. Works well with your favorite rappers!
         - Covered by
         - Remixed by
         - And probably a whole lot more!
+- BUG FIXES:
+    - main function executing is TWICE
+- REFACTOR:
+    - Remove duplicate code

@@ -20,8 +20,8 @@ class DegreesOfSeparation:
         except Exception as error:
             print(error)
 
-        beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
-        results = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
+        beginning_artist, ending_artist = self.retrieve_artists()
+        results = self.perform_artist_search(beginning_artist, ending_artist)
         for track in results:
             print(str(track))
 
@@ -38,60 +38,56 @@ class DegreesOfSeparation:
                 print(exc)
 
     def retrieve_artists(self):
-        beginning_artist = input("Name of artist to begin search: ").lower()
-        ending_artist = input("Name of artist to end search: ").lower()
+        beginning_artist = input("Name of artist to begin search: ").upper()
+        ending_artist = input("Name of artist to end search: ").upper()
         return beginning_artist, ending_artist
 
     def perform_artist_search(self, beginning_artist, ending_artist):
         # TODO replace this dictionary with a defaultdict
         artist_graph = {beginning_artist: set([])}
-
         queue = [(beginning_artist, [])]
+        result = []
+
+        result = self.subsearch(artist_graph, [], queue, None, beginning_artist, ending_artist)
+        if len(result) > 0:
+            return result
 
         while queue:
             (vertex, path) = queue.pop(0)
-
-            if vertex == beginning_artist:
-                results = self.__sp.search(q=beginning_artist, limit=50)
-                sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
-                for track in results['tracks']['items']:
-                    for artist in track['artists']:
-                        featured_artist = str(artist['name']).upper()
-
-                        if featured_artist == ending_artist:
-                            return [beginning_artist, ending_artist]
-
-                        if self.can_add_artist_to_graph(featured_artist, artist_graph, beginning_artist):
-                            related_track = TrackInfo(track['name'], beginning_artist, featured_artist)
-                            artist_graph[beginning_artist].add(related_track)
-                            queue.append((featured_artist, path + [related_track]))
-
-            # find next unique artist in associated artists graph
             not_yet_visited = artist_graph[vertex] - set(path)
-
             for current_track in not_yet_visited:
-                current_artist = current_track.featured_artist
-                results = self.__sp.search(q=current_artist, limit=50)
-                sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
-                for track in results['tracks']['items']:
-                    if len(track['artists']) > 1:
-                        for artist in track['artists']:
-                            featured_artist = str(artist['name']).upper()
-                            related_track = TrackInfo(track['name'], current_artist, featured_artist)
+                main_artist = current_track.featured_artist
+                result = self.subsearch(artist_graph, path, queue, current_track, main_artist, ending_artist)
+                if len(result) > 0:
+                    return result
 
-                            if featured_artist == ending_artist:
-                                return path + [current_track, related_track]
+        return result
 
-                            if self.can_add_artist_to_graph(featured_artist, artist_graph, current_artist):
-                                if current_artist in artist_graph:
-                                    artist_graph[current_artist].add(related_track)
-                                else:
-                                    artist_graph[current_artist] = {related_track}
-                                queue.append((current_track, path + [current_track]))
+    def subsearch(self, artist_graph, path, queue, current_track, main_artist, ending_artist):
+        results = self.__sp.search(q=main_artist, limit=50)
+        sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
+        for track in results['tracks']['items']:
+            if len(track['artists']) > 1:
+                for artist in track['artists']:
+                    featured_artist = str(artist['name']).upper()
+                    related_track = TrackInfo(track['name'], main_artist, featured_artist)
+
+                    if featured_artist == ending_artist:
+                        if current_track is not None:
+                            return path + [current_track, related_track]
+                        else:
+                            return path + [related_track]
+
+                    if self.can_add_artist_to_graph(artist_graph, featured_artist, main_artist):
+                        if main_artist in artist_graph:
+                            artist_graph[main_artist].add(related_track)
+                        else:
+                            artist_graph[main_artist] = {related_track}
+                        queue.append((related_track, path + [related_track]))
 
         return []
 
-    def can_add_artist_to_graph(self, featured_artist, featured_artists, beginning_artist):
+    def can_add_artist_to_graph(self, featured_artists, featured_artist, beginning_artist):
         return featured_artist not in featured_artists and featured_artist != beginning_artist
 
 degrees_of_separation = DegreesOfSeparation()

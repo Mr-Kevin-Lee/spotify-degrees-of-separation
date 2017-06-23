@@ -1,4 +1,2 @@
 client_id: ff04c93e546142199eae7a1cc3ca53b9
 client_secret: 8b95889cc47045e683a9c686794194f6
-spotify_auth_endpoint: https://accounts.spotify.com/api/token
-auth_redirect_uri: http://Mr-Kevin-Lee.github.io/degreesofseparation
