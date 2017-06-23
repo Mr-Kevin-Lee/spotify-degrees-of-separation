@@ -1,7 +1,7 @@
 import spotipy
 import yaml
-import requests
 from spotipy.oauth2 import SpotifyClientCredentials
+from collections import defaultdict
 
 from src.TrackInfo import TrackInfo
 
@@ -21,8 +21,9 @@ class DegreesOfSeparation:
             print(error)
 
         beginning_artist, ending_artist = "Chance the Rapper", "Kendrick Lamar"  #retrieve_artists()
-        result = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
-        print(result)
+        results = self.perform_artist_search(str(beginning_artist).upper(), str(ending_artist).upper())
+        for track in results:
+            print(str(track))
 
     def initialize_spotipy(self):
         client_credentials_manager = SpotifyClientCredentials(self._config.get("client_id"),
@@ -42,63 +43,56 @@ class DegreesOfSeparation:
         return beginning_artist, ending_artist
 
     def perform_artist_search(self, beginning_artist, ending_artist):
-        featured_artists = {beginning_artist: set([])}
-        temp_featured_artists = []
+        # TODO replace this dictionary with a defaultdict
+        artist_graph = {beginning_artist: set([])}
 
-        results = self.__sp.search(q=beginning_artist, limit=50)
-        for track in results['tracks']['items']:
-            for artist in track['artists']:
-                featured_artist = str(artist['name']).upper()
+        queue = [(beginning_artist, [])]
 
-                if featured_artist == ending_artist:
-                    return [beginning_artist, ending_artist]
-
-                if self.can_add_artist_to_graph(featured_artist, featured_artists, temp_featured_artists, beginning_artist):
-                    related_track = TrackInfo(track['name'], beginning_artist, featured_artist)
-                    temp_featured_artists.append(featured_artist)
-                    featured_artists[beginning_artist].add(related_track)
-
-        return self.artist_subsearch(featured_artists, beginning_artist, ending_artist)
-
-    def artist_subsearch(self, artist_graph, starting_artist, ending_artist):
-        queue = [(starting_artist, [starting_artist])]
-        # iterate through queue and pick up the first elements
         while queue:
             (vertex, path) = queue.pop(0)
+
+            if vertex == beginning_artist:
+                results = self.__sp.search(q=beginning_artist, limit=50)
+                sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
+                for track in results['tracks']['items']:
+                    for artist in track['artists']:
+                        featured_artist = str(artist['name']).upper()
+
+                        if featured_artist == ending_artist:
+                            return [beginning_artist, ending_artist]
+
+                        if self.can_add_artist_to_graph(featured_artist, artist_graph, beginning_artist):
+                            related_track = TrackInfo(track['name'], beginning_artist, featured_artist)
+                            artist_graph[beginning_artist].add(related_track)
+                            queue.append((featured_artist, path + [related_track]))
+
             # find next unique artist in associated artists graph
             not_yet_visited = artist_graph[vertex] - set(path)
 
             for current_track in not_yet_visited:
-                featured_artists = self.search_for_featured_artists(artist_graph, current_track, ending_artist, path)
-                artist_graph[current_track] = featured_artists
+                current_artist = current_track.featured_artist
+                results = self.__sp.search(q=current_artist, limit=50)
+                sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
+                for track in results['tracks']['items']:
+                    if len(track['artists']) > 1:
+                        for artist in track['artists']:
+                            featured_artist = str(artist['name']).upper()
+                            related_track = TrackInfo(track['name'], current_artist, featured_artist)
 
-                if featured_artists is not None and ending_artist in featured_artists:
-                    return featured_artists
-                elif current_track == ending_artist:
-                    return path + [current_track]
-                else:
-                    queue.append((current_track, path + [current_track]))
+                            if featured_artist == ending_artist:
+                                return path + [current_track, related_track]
 
-    def search_for_featured_artists(self, artist_graph, initial_artist, ending_artist, path):
-        track_artists = artist_graph.get(initial_artist, set([]))
+                            if self.can_add_artist_to_graph(featured_artist, artist_graph, current_artist):
+                                if current_artist in artist_graph:
+                                    artist_graph[current_artist].add(related_track)
+                                else:
+                                    artist_graph[current_artist] = {related_track}
+                                queue.append((current_track, path + [current_track]))
 
-        results = self.__sp.search(q=initial_artist, limit=50)
-        sorted(results['tracks']['items'], key=lambda track: (track['popularity']))
+        return []
 
-        for track in results['tracks']['items']:
-            if len(track['artists']) > 1:
-                for artist in track['artists']:
-                    featured_artist = artist['name']
-
-                    if str(featured_artist).lower() == str(ending_artist).lower():
-                        return path + [initial_artist, featured_artist]
-
-                    if featured_artist not in track_artists:
-                        track_artists.add(featured_artist)
-
-    def can_add_artist_to_graph(self, featured_artist, featured_artists, temp_featured_artists, beginning_artist):
-        return featured_artist not in featured_artists and featured_artist not in temp_featured_artists and featured_artist != beginning_artist
-
+    def can_add_artist_to_graph(self, featured_artist, featured_artists, beginning_artist):
+        return featured_artist not in featured_artists and featured_artist != beginning_artist
 
 degrees_of_separation = DegreesOfSeparation()
 degrees_of_separation.main()
